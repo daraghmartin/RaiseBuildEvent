@@ -1,5 +1,8 @@
 # RaiseBuildEvent
+
 Simple go thing to push a build event
+
+Intended to send Cloudwatch Events during a CodePipeline run
 
 curl -LO https://github.com/daraghmartin/RaiseBuildEvent/raw/master/RaiseBuildEvent
 
@@ -15,3 +18,5 @@ curl -LO https://github.com/daraghmartin/RaiseBuildEvent/raw/master/RaiseBuildEv
 ```
 
 Optional: -BuildDate=now, -DetailType=build.notification, -v=print things
+
+BuildStatus will convert 0, 1 to Failed, Succeeded

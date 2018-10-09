@@ -49,6 +49,14 @@ func main() {
 	options["comment"] = *comment
 	options["detailType"] = *detailType
 
+	// Check for status = 0 (bad) or 1 (good)
+	switch options["status"] {
+	case "0":
+		options["status"] = "Failed"
+	case "1":
+		options["status"] = "Succeeded"
+	}
+
 	if *verbose {
 		for k, v := range options {
 			fmt.Printf("%s:[%s]\n", k, v)
