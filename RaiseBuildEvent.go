@@ -1,40 +1,66 @@
 package main
 
 import (
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/cloudwatchevents"
-	// 	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
-	// 	"github.com/aws/aws-sdk-go/service/ssm"
+	"flag"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudwatchevents"
 	"os"
 	"time"
-	// 	"strconv"
-	// 	"strings"
 )
 
 func main() {
-	numArgs := 7
+	status := flag.String("BuildStatus", "", "Status")
+	version := flag.String("BuildVersion", "", "Version")
+	buildDate := flag.String("BuildDate", "", "Optional")
+	commit := flag.String("Commit", "", "Commit")
+	name := flag.String("BuildName", "", "Name")
+	comment := flag.String("Comment", "", "Optional")
+	detailType := flag.String("DetailType", "build.notification", "DetailType (Optional)")
+	source := flag.String("Source", "", "Source")
+	verbose := flag.Bool("v", false, "Verbose")
 
-	if len(os.Args) != (numArgs + 1) {
-		gotArgs := len(os.Args) - 1
-		fmt.Printf("Error need %d args - got %d\n", numArgs, gotArgs)
-		os.Exit(1)
+	flag.Parse()
+
+	options := make(map[string]string)
+
+	// Required...
+	options["status"] = *status
+	options["version"] = *version
+	options["commit"] = *commit
+	options["name"] = *name
+	options["source"] = *source
+
+	// so far these are all required
+	for _, v := range options {
+		if v == "" {
+			fmt.Println("Not all options provided")
+			flag.PrintDefaults()
+			os.Exit(1)
+		}
 	}
 
-	name := os.Args[1]
-	version := os.Args[2]
-	commit := os.Args[3]
-	status := os.Args[4]
-	detailType := os.Args[5]
-	source := os.Args[6]
-	comment := os.Args[7]
+	// Optional...
+	options["buildDate"] = *buildDate
+	if options["buildDate"] == "" {
+		options["buildDate"] = time.Now().String()
+	}
+	options["comment"] = *comment
+	options["detailType"] = *detailType
 
-	now := time.Now()
+	if *verbose {
+		for k, v := range options {
+			fmt.Printf("%s:[%s]\n", k, v)
+		}
+	}
 
-	detail := fmt.Sprintf("{ \"BuildStatus\": \"%s\", \"BuildVersion\": \"%s\", \"BuildDate\": \"%s\", \"commit\": \"%s\", \"BuildName\": \"%s\", \"Comment\": \"%s\"}", status, version, now, commit, name, comment)
+	detail := fmt.Sprintf("{ \"BuildStatus\": \"%s\", \"BuildVersion\": \"%s\", \"BuildDate\": \"%s\", \"commit\": \"%s\", \"BuildName\": \"%s\", \"Comment\": \"%s\"}",
+		options["status"], options["version"], options["buildDate"], options["commit"], options["name"], options["comment"])
 
-	fmt.Println(detail)
+	if *verbose {
+		fmt.Println(detail)
+	}
 
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
@@ -47,12 +73,12 @@ func main() {
 		Entries: []*cloudwatchevents.PutEventsRequestEntry{
 			&cloudwatchevents.PutEventsRequestEntry{
 				Detail:     aws.String(detail),
-				DetailType: aws.String(detailType),
-				Source:     aws.String(source),
+				DetailType: aws.String(options["detailType"]),
+				Source:     aws.String(options["source"]),
 				Resources: []*string{
-					aws.String(fmt.Sprintf("Build:%s", version)),
-					aws.String(version),
-					aws.String(name),
+					aws.String(fmt.Sprintf("Build:%s", options["version"])),
+					aws.String(options["version"]),
+					aws.String(options["name"]),
 				},
 			},
 		},
@@ -63,5 +89,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	fmt.Println("Ingested events:", result.Entries)
+	if *verbose {
+		fmt.Println("Ingested events:", result.Entries)
+	}
 }
