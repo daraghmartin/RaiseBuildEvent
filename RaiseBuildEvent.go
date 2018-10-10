@@ -11,43 +11,41 @@ import (
 )
 
 func main() {
-	status := flag.String("BuildStatus", "", "Status")
-	version := flag.String("BuildVersion", "", "Version")
-	buildDate := flag.String("BuildDate", "", "Optional")
-	commit := flag.String("Commit", "", "Commit")
-	name := flag.String("BuildName", "", "Name")
-	comment := flag.String("Comment", "", "Optional")
-	detailType := flag.String("DetailType", "build.notification", "DetailType (Optional)")
-	source := flag.String("Source", "", "Source")
+	opts := make(map[string]*string)
+
+	opts["status"] = flag.String("BuildStatus", "", "Status")
+	opts["version"] = flag.String("BuildVersion", "", "Version")
+	opts["buildDate"] = flag.String("BuildDate", "", "Optional")
+	opts["commit"] = flag.String("Commit", "", "Commit")
+	opts["name"] = flag.String("BuildName", "", "Name")
+	opts["comment"] = flag.String("Comment", "", "Optional")
+	opts["detailType"] = flag.String("DetailType", "build.notification", "DetailType (Optional)")
+	opts["source"] = flag.String("Source", "", "Source")
+
 	verbose := flag.Bool("v", false, "Verbose")
 
 	flag.Parse()
 
 	options := make(map[string]string)
 
-	// Required...
-	options["status"] = *status
-	options["version"] = *version
-	options["commit"] = *commit
-	options["name"] = *name
-	options["source"] = *source
+	// Convert pointers map to string map to save on my typing
+	for k, v := range opts {
+		options[k] = *v
+	}
 
-	// so far these are all required
-	for _, v := range options {
-		if v == "" {
+	// Required...
+	validators := []string{"status", "version", "commit", "name", "source"}
+	for _, validator := range validators {
+		if options[validator] == "" {
 			fmt.Println("Not all options provided")
 			flag.PrintDefaults()
 			os.Exit(1)
 		}
 	}
 
-	// Optional...
-	options["buildDate"] = *buildDate
 	if options["buildDate"] == "" {
 		options["buildDate"] = time.Now().String()
 	}
-	options["comment"] = *comment
-	options["detailType"] = *detailType
 
 	// Check for status = 0 (bad) or 1 (good)
 	switch options["status"] {
